@@ -1,5 +1,5 @@
 """
-NLTK DRT module extended with presuppositions  
+NLTK DRT module extended with presuppositions
 """
 
 __author__ = "Alex Kislev, Emma Li, Peter Makarov"
@@ -15,7 +15,8 @@ from nltk.sem.logic import IndividualVariableExpression
 from nltk.sem.logic import _counter, is_eventvar, is_funcvar
 from nltk.sem.logic import BasicType
 from nltk.sem.logic import Expression
-from nltk.sem.logic import ParseException
+# ParseException -> LogicalExpressionException
+from nltk.sem.logic import LogicalExpressionException
 from nltk.sem.drt import DrsDrawer, AnaphoraResolutionException
 
 import nltk.sem.drt as drt
@@ -49,9 +50,9 @@ def is_indvar(expr):
     """
     An individual variable must be a single lowercase character other than 'e', 't', 'n', 's',
     followed by zero or more digits.
-    
+
     @param expr: C{str}
-    @return: C{boolean} True if expr is of the correct form 
+    @return: C{boolean} True if expr is of the correct form
     """
     assert isinstance(expr, str), "%s is not a string" % expr
     return re.match(r'^[a-df-mo-ru-z]\d*$', expr)
@@ -60,9 +61,9 @@ def is_timevar(expr):
     """
     An time variable must be a single lowercase 't' or 'n' character followed by
     zero or more digits. Do we need a separate type for utterance time n?
-    
+
     @param expr: C{str}
-    @return: C{boolean} True if expr is of the correct form 
+    @return: C{boolean} True if expr is of the correct form
     """
     assert isinstance(expr, str), "%s is not a string" % expr
     return re.match(r'^[tn]\d*$', expr)
@@ -72,9 +73,9 @@ def is_statevar(expr):
     """
     An state variable must be a single lowercase 's' character followed by
     zero or more digits.
-    
+
     @param expr: C{str}
-    @return: C{boolean} True if expr is of the correct form 
+    @return: C{boolean} True if expr is of the correct form
     """
     assert isinstance(expr, str), "%s is not a string" % expr
     return re.match(r'^s\d*$', expr)
@@ -84,20 +85,20 @@ def is_uttervar(expr):
     """
     An utterance time variable must be a single lowercase 'n' character followed by
     zero or more digits.
-    
+
     @param expr: C{str}
-    @return: C{boolean} True if expr is of the correct form 
+    @return: C{boolean} True if expr is of the correct form
     """
     assert isinstance(expr, str), "%s is not a string" % expr
     return re.match(r'^n\d*$', expr)
-  
+
 
 def unique_variable(pattern=None, ignore=None):
     """
     Return a new, unique variable.
     param pattern: C{Variable} that is being replaced.  The new variable must
     be the same type.
-    param term: a C{set} of C{Variable}s that should not be returned from 
+    param term: a C{set} of C{Variable}s that should not be returned from
     this function.
     return: C{Variable}
     """
@@ -116,7 +117,7 @@ def unique_variable(pattern=None, ignore=None):
             assert False, "Cannot generate a unique constant"
     else:
         prefix = 'z'
-        
+
     v = Variable(prefix + str(_counter.get()))
     while ignore is not None and v in ignore:
         v = Variable(prefix + str(_counter.get()))
@@ -126,7 +127,7 @@ class TimeVariableExpression(IndividualVariableExpression):
     """This class represents variables that take the form of a single lowercase
     'i' character followed by zero or more digits."""
     type = TIME_TYPE
-    
+
 class StateVariableExpression(IndividualVariableExpression):
     """This class represents variables that take the form of a single lowercase
     's' character followed by zero or more digits."""
@@ -144,7 +145,7 @@ class ReverseIterator:
     def __iter__(self):
         if self.start > 0:
             i = self.start + 1
-        else: 
+        else:
             i = len(self.sequence) + self.start + 1
         while i > 0:
             i -= 1
@@ -162,13 +163,13 @@ class Reading(list):
 class Binding(Reading):
     pass
 
-class LocalAccommodation(Reading): 
+class LocalAccommodation(Reading):
     pass
 
-class IntermediateAccommodation(Reading): 
+class IntermediateAccommodation(Reading):
     pass
 
-class GlobalAccommodation(Reading): 
+class GlobalAccommodation(Reading):
     pass
 
 class VariableReplacer(object):
@@ -224,35 +225,35 @@ class DrtTokens(drt.DrtTokens):
     REFLEXIVE_PRONOUN = 'RPRO'
     POSSESSIVE_PRONOUN = 'PPRO'
 
-class AbstractDrs(drt.AbstractDrs):
+class DrtExpression(drt.DrtExpression):
     """
     A base abstract DRT Expression from which every DRT Expression inherits.
     """
 
     def applyto(self, other):
         return DrtApplicationExpression(self, other)
-    
+
     def __neg__(self):
         return DrtNegatedExpression(self)
 
     def __or__(self, other):
-        assert isinstance(other, AbstractDrs)
+        assert isinstance(other, DrtExpression)
         return DrtOrExpression(self, other)
 
     def __gt__(self, other):
-        assert isinstance(other, AbstractDrs)
+        assert isinstance(other, DrtExpression)
         return DrtImpExpression(self, other)
 
     def __lt__(self, other):
-        assert isinstance(other, AbstractDrs)
+        assert isinstance(other, DrtExpression)
         return DrtIffExpression(self, other)
 
     def __add__(self, other):
         return ConcatenationDRS(self, other)
-    
+
     def __deepcopy__(self, memo):
         return self.deepcopy()
-    
+
     def make_EqualityExpression(self, first, second):
         return DrtEqualityExpression(first, second)
 
@@ -267,10 +268,10 @@ class AbstractDrs(drt.AbstractDrs):
                     return set([e])
                 else:
                     return set([])
-            else: 
+            else:
                 combinator = lambda * parts: reduce(operator.or_, parts)
                 return e.visit(f, combinator, set())
-        
+
         result = self
         for i, v in enumerate(sorted(list(f(self)))):
             if is_eventvar(v.name):
@@ -284,7 +285,7 @@ class AbstractDrs(drt.AbstractDrs):
             result = result.replace(v,
                         self.make_VariableExpression(Variable(newVar)), True)
         return result
-    
+
     def substitute_bindings(self, bindings):
         expr = self
         for var in expr.variables():
@@ -319,9 +320,9 @@ class AbstractDrs(drt.AbstractDrs):
         errors = []
         if inference_check:
             failed_readings = []
-        
+
         def traverse(base_reading, operations):
-            for operation in sorted(operations, key=lambda o: AbstractDrs.RESOLUTION_ORDER[type(o)]):
+            for operation in sorted(operations, key=lambda o: DrtExpression.RESOLUTION_ORDER[type(o)]):
                 new_reading = base_reading.deepcopy(operation)
                 if verbose:
                     print("reading: %s" % new_reading)
@@ -342,7 +343,7 @@ class AbstractDrs(drt.AbstractDrs):
                         readings.append(new_reading)
                 else:
                     if traverse(new_reading, new_operations[0]):
-                        if len(operations) == 1 or AbstractDrs.RESOLUTION_ORDER[type(operation)] != 0:
+                        if len(operations) == 1 or DrtExpression.RESOLUTION_ORDER[type(operation)] != 0:
                             return True
             return False
 
@@ -353,15 +354,15 @@ class AbstractDrs(drt.AbstractDrs):
             return [self]
 
         if not readings and errors:
-            raise ResolutionException(". ".join(errors)) 
+            raise ResolutionException(". ".join(errors))
         return readings, failed_readings if inference_check else readings
 
     def readings(self, trail=[]):
         raise NotImplementedError()
 
-class DRS(AbstractDrs, drt.DRS):
+class DRS(DrtExpression, drt.DRS):
     """A Temporal Discourse Representation Structure."""
-    
+
     def fol(self):
         if not self.conds:
             raise Exception("Cannot convert DRS with no conditions to FOL.")
@@ -381,9 +382,9 @@ class DRS(AbstractDrs, drt.DRS):
             ref_cond = drt.DrtConstantExpression(Variable("time"))
         else:
             ref_cond = drt.DrtConstantExpression(Variable("individual"))
-        
+
         return DrtApplicationExpression(ref_cond, DrtAbstractVariableExpression(referent))
-    
+
 
     def replace(self, variable, expression, replace_bound=False):
         """Replace all instances of variable v with expression E in self,
@@ -402,11 +403,11 @@ class DRS(AbstractDrs, drt.DRS):
                            [cond.replace(variable, expression, True) for cond in self.conds])
         else:
             #variable not bound by this DRS
-            
+
             # any bound variable that appears in the expression must
             # be alpha converted to avoid a conflict
             for ref in (set(self.get_refs()) & expression.free()):
-                newvar = unique_variable(ref) 
+                newvar = unique_variable(ref)
                 newvarex = DrtVariableExpression(newvar)
                 if ref in self.refs:
                     i = self.refs.index(ref)
@@ -414,18 +415,18 @@ class DRS(AbstractDrs, drt.DRS):
                 else:
                     refs = self.refs
                 self = self.__class__(refs,
-                           [cond.replace(ref, newvarex, True) 
+                           [cond.replace(ref, newvarex, True)
                             for cond in self.conds])
-                
+
             #replace in the conditions
             return self.__class__(self.refs,
-                       [cond.replace(variable, expression, replace_bound) 
+                       [cond.replace(variable, expression, replace_bound)
                         for cond in self.conds])
-            
+
     def free(self, indvar_only=True):
         """@see: Expression.free()"""
         conds_free = reduce(operator.or_,
-                            [c.free(indvar_only) for c in self.conds], set()) 
+                            [c.free(indvar_only) for c in self.conds], set())
         return conds_free - (set(self.refs) | reduce(operator.or_, [set(c.refs) for c in self.conds if isinstance(c, PresuppositionDRS)], set()))
 
     def get_refs(self, recursive=False):
@@ -439,8 +440,8 @@ class DRS(AbstractDrs, drt.DRS):
 
     def deepcopy(self, operations=[]):
         """This method returns a deep copy of the DRS.
-        Optionally, it can take a list of lists of tuples (DRS, function) 
-        as an argument and generate a reading by performing 
+        Optionally, it can take a list of lists of tuples (DRS, function)
+        as an argument and generate a reading by performing
         a substitution in the DRS as specified by the function.
         @param operations: a list of lists of tuples
         """
@@ -472,7 +473,7 @@ class DRS(AbstractDrs, drt.DRS):
 
 def DrtVariableExpression(variable):
     """
-    This is a factory method that instantiates and returns a subtype of 
+    This is a factory method that instantiates and returns a subtype of
     C{DrtAbstractVariableExpression} appropriate for the given variable.
     """
 
@@ -490,12 +491,12 @@ def DrtVariableExpression(variable):
         return DrtTimeVariableExpression(variable)
     else:
         return DrtConstantExpression(variable)
-    
 
-class DrtAbstractVariableExpression(AbstractDrs, drt.DrtAbstractVariableExpression):   
+
+class DrtAbstractVariableExpression(DrtExpression, drt.DrtAbstractVariableExpression):
     def readings(self, trail=[]):
         return None
-    
+
     def deepcopy(self, operations=[]):
         return self.__class__(self.variable)
 
@@ -547,10 +548,10 @@ class DrtFeatureConstantExpression(DrtConstantExpression):
 
     def str(self, syntax=DrtTokens.NLTK):
         return str(self.variable) + "{" + ",".join([str(feature) for feature in self.features]) + "}"
-    
+
     def deepcopy(self, operations=[]):
         return self.__class__(self.variable, self.features)
-    
+
     def fol(self):
         return DrtConstantExpression(self.variable)
 
@@ -558,14 +559,14 @@ class DrtProperNameExpression(DrtConstantExpression):
     """proper names"""
     pass
 
-class DrtNegatedExpression(AbstractDrs, drt.DrtNegatedExpression):
+class DrtNegatedExpression(DrtExpression, drt.DrtNegatedExpression):
     def readings(self, trail=[]):
         return self.term.readings(trail + [self])
 
     def deepcopy(self, operations=None):
         return self.__class__(self.term.deepcopy(operations))
 
-class DrtLambdaExpression(AbstractDrs, drt.DrtLambdaExpression):
+class DrtLambdaExpression(DrtExpression, drt.DrtLambdaExpression):
     def alpha_convert(self, newvar):
         """Rename all occurrences of the variable introduced by this variable
         binder in the expression to @C{newvar}.
@@ -580,41 +581,41 @@ class DrtLambdaExpression(AbstractDrs, drt.DrtLambdaExpression):
         assert isinstance(expression, Expression), "%s is not an Expression" % expression
         #if the bound variable is the thing being replaced
         if self.variable == variable:
-            if replace_bound: 
+            if replace_bound:
                 assert isinstance(expression, DrtAbstractVariableExpression), \
                        "%s is not a AbstractVariableExpression" % expression
                 return self.__class__(expression.variable,
                                       self.term.replace(variable, expression, True))
-            else: 
+            else:
                 return self
         else:
             # if the bound variable appears in the expression, then it must
             # be alpha converted to avoid a conflict
             if self.variable in expression.free():
                 self = self.alpha_convert(unique_variable(pattern=self.variable))
-                
+
             #replace in the term
             return self.__class__(self.variable,
                                   self.term.replace(variable, expression, replace_bound))
 
     def readings(self, trail=[]):
         return self.term.readings(trail + [self])
-    
+
     def deepcopy(self, operations=[]):
         return self.__class__(self.variable, self.term.deepcopy(operations))
-    
+
     def get_refs(self, recursive=False):
         """@see: AbstractExpression.get_refs()"""
         return []
 
-class DrtBooleanExpression(AbstractDrs, drt.DrtBooleanExpression):
+class DrtBooleanExpression(DrtExpression, drt.DrtBooleanExpression):
     def readings(self, trail=[]):
         first_readings = self.first.readings(trail + [self])
         if first_readings:
             return first_readings
         else:
             return self.second.readings(trail + [self])
-    
+
     def deepcopy(self, operations=[]):
         return self.__class__(self.first.deepcopy(operations), self.second.deepcopy(operations))
 
@@ -628,10 +629,10 @@ class DrtBooleanExpression(AbstractDrs, drt.DrtBooleanExpression):
                 new_second = self.second.replace(ref, newref, True)
 
             return drt.DrtBooleanExpression.simplify(self.__class__(self.first, new_second))
-        
+
         else:
             return drt.DrtBooleanExpression.simplify(self)
-    
+
 class DrtOrExpression(DrtBooleanExpression, drt.DrtOrExpression):
     pass
 
@@ -651,17 +652,17 @@ class DrtImpExpression(DrtBooleanExpression, drt.DrtImpExpression):
                         varex = self.make_VariableExpression(r1)
                         other = other.replace(r2, varex, True)
                     return self.first.conds == other.first.conds and self.second.conds == other.second.conds
-            else:        
+            else:
                 return self.first == other.first and self.second == other.second
         return False
 
 class DrtIffExpression(DrtBooleanExpression, drt.DrtIffExpression):
     pass
 
-class DrtEqualityExpression(AbstractDrs, drt.DrtEqualityExpression):
+class DrtEqualityExpression(DrtExpression, drt.DrtEqualityExpression):
     def readings(self, trail=[]):
         return None
-    
+
     def deepcopy(self, operations=[]):
         return self.__class__(self.first.deepcopy(operations), self.second.deepcopy(operations))
 
@@ -673,15 +674,15 @@ class ConcatenationDRS(DrtBooleanExpression, drt.ConcatenationDRS):
         first = self.first
         second = self.second
 
-        # If variable is bound by both first and second 
+        # If variable is bound by both first and second
         if isinstance(first, DRS) and isinstance(second, DRS) and \
            variable in (set(first.get_refs(True)) & set(second.get_refs(True))):
             first = first.replace(variable, expression, True)
             second = second.replace(variable, expression, True)
-            
+
         # If variable is bound by first
         elif isinstance(first, DRS) and variable in first.refs:
-            if replace_bound: 
+            if replace_bound:
                 first = first.replace(variable, expression, replace_bound)
                 second = second.replace(variable, expression, replace_bound)
 
@@ -693,14 +694,14 @@ class ConcatenationDRS(DrtBooleanExpression, drt.ConcatenationDRS):
 
         else:
             # alpha convert every ref that is free in 'expression'
-            for ref in (set(self.get_refs(True)) & expression.free()): 
+            for ref in (set(self.get_refs(True)) & expression.free()):
                 v = DrtVariableExpression(unique_variable(ref))
                 first = first.replace(ref, v, True)
                 second = second.replace(ref, v, True)
 
             first = first.replace(variable, expression, replace_bound)
             second = second.replace(variable, expression, replace_bound)
-            
+
         return self.__class__(first, second)
 
     def simplify(self):
@@ -713,20 +714,20 @@ class ConcatenationDRS(DrtBooleanExpression, drt.ConcatenationDRS):
                 # alpha convert the ref in 'second' to prevent collision
                 newvar = DrtVariableExpression(unique_variable(ref))
                 second = second.replace(ref, newvar, True)
-            
+
             #DRS type is derived from the first member or from the second one
             drs_type = first.__class__ if isinstance(first, PresuppositionDRS) else second.__class__
             return drs_type(first.refs + second.refs, first.conds + second.conds)
         else:
             return self.__class__(first, second)
 
-class DrtApplicationExpression(AbstractDrs, drt.DrtApplicationExpression):
-    
+class DrtApplicationExpression(DrtExpression, drt.DrtApplicationExpression):
+
     def fol(self):
         if self.is_propername():
             return EqualityExpression(self.function.fol(),
                                       self.argument.fol())
-                 
+
         else: return ApplicationExpression(self.function.fol(),
                                            self.argument.fol())
 
@@ -734,9 +735,9 @@ class DrtApplicationExpression(AbstractDrs, drt.DrtApplicationExpression):
         """
         A proper name is capitalised. We assume that John(x) uniquely
         identifies the bearer of the name John and so, when going from Kamp & Reyle's
-        DRT format into classical FOL logic, we change a condition like that into John = x.   
+        DRT format into classical FOL logic, we change a condition like that into John = x.
 
-        @return: C{boolean} True if expr is of the correct form 
+        @return: C{boolean} True if expr is of the correct form
         """
         return isinstance(self.function, DrtConstantExpression) and\
         self.function.variable.name.istitle()
@@ -756,7 +757,7 @@ class DrtEventualityApplicationExpression(DrtApplicationExpression):
     pass
 
 class PresuppositionDRS(DRS):
-        
+
     def readings(self, trail=[]):
         inner_readings = DRS.readings(self, trail)
         if inner_readings:
@@ -764,12 +765,12 @@ class PresuppositionDRS(DRS):
         else:
             self._init_presupp_data()
             return self._presupposition_readings(trail)
-        
+
     def _find_outer_drs(self, trail):
         for expr in trail:
             if expr.__class__ is DRS:
                 return expr
-        
+
     def _find_local_drs(self, trail):
         drs = None
         for expr in ReverseIterator(trail):
@@ -780,10 +781,10 @@ class PresuppositionDRS(DRS):
             if expr.__class__ is DRS:
                 drs = expr
         return drs
-    
+
     def is_possible_binding(self, cond):
         return is_unary_predicate(cond) and self.has_same_features(cond) and cond.argument.__class__ is DrtIndividualVariableExpression
-                
+
     def find_bindings(self, trail, collect_event_data=False, filter=lambda x: type(x) is DRS, individuals=None):
         bindings = []
         if collect_event_data:
@@ -794,12 +795,12 @@ class PresuppositionDRS(DRS):
             for cond in drs.conds:
                 # Ignore conditions following the presupposition DRS
                 if cond is self:
-                    if not collect_event_data: 
+                    if not collect_event_data:
                         break # assuming that the filtered_trail has drss ordered from the outermost to the innermost
                 if not isinstance(cond, DrtApplicationExpression):
-                    continue 
-                    is_bindable = False 
-                if is_bindable and self.is_possible_binding(cond): 
+                    continue
+                    is_bindable = False
+                if is_bindable and self.is_possible_binding(cond):
                     bindings.append(cond)
                 if collect_event_data:
                     self.collect_event_data(cond, event_data_map, event_strings_map, individuals)
@@ -820,23 +821,23 @@ class PresuppositionDRS(DRS):
         elif individuals is not None and cond.__class__ == DrtApplicationExpression and \
         not isinstance(cond.function, DrtApplicationExpression):
             individuals.setdefault(cond.argument.variable, []).append(cond)
-        
+
     def _enrich_event_data_map(self, event_data_map, event_strings_map):
         for individual in event_data_map:
             new_event_list = []
             for event_tuple in event_data_map[individual]:
-                new_event_list.append((event_tuple[0], event_tuple[1], event_strings_map.get(event_tuple[0], None))) 
+                new_event_list.append((event_tuple[0], event_tuple[1], event_strings_map.get(event_tuple[0], None)))
             event_data_map[individual] = new_event_list
-                
+
     def is_presupposition_cond(self, cond):
         return True
-        
+
     def _init_presupp_data(self):
         presupp_cond_list = [cond for cond in self.conds if is_unary_predicate(cond) and cond.argument.variable == self.refs[0] and self.is_presupposition_cond(cond)]
         for cond in presupp_cond_list:
             if isinstance(cond.function, DrtFeatureConstantExpression): # this is the one
                 # There can be more than one DrtFeatureConstantExpression on the conditions on list, e.g.
-                # "Tom, a kind boy, took her hand", or "Tom, who is a kind boy,...", or "Linguist Grimm suggested ...", 
+                # "Tom, a kind boy, took her hand", or "Tom, who is a kind boy,...", or "Linguist Grimm suggested ...",
                 # or "The distinguished physicist Einstein ...". But 'is_presupposition_cond' helps us find the right one.
                 self.variable = cond.argument.variable
                 self.features = cond.function.features
@@ -848,7 +849,7 @@ class PresuppositionDRS(DRS):
         self.features = None
         self.function_name = presupp_cond_list[0].variable.name
         self.cond = presupp_cond_list[0]
-    
+
     def has_same_features(self, cond):
         return (not isinstance(cond.function, DrtFeatureConstantExpression) and not self.features) \
                 or (isinstance(cond.function, DrtFeatureConstantExpression) and cond.function.features == self.features)
@@ -860,7 +861,7 @@ class PresuppositionDRS(DRS):
         superordinate_drs_index = id(superordinate_drs)
         if superordinate_drs_index in condition_index_cache:
             return condition_index_cache[superordinate_drs_index]
-        # Use a for loop and 'is' to find the condition. 
+        # Use a for loop and 'is' to find the condition.
         # Do not use index(), because it calls a time-consuming equals method.
         for ind, trailee in enumerate(trail):
             if trailee is superordinate_drs:
@@ -871,22 +872,22 @@ class PresuppositionDRS(DRS):
                         condition_index_cache[superordinate_drs_index] = i
                         return i # condition_index
         return None
-    
+
     class Operation(object):
         """An interface for all operations"""
         def __call__(self, drs):
             raise NotImplementedError
-    
+
     class Accommodate(Operation):
         def __init__(self, presupp_drs, condition_index):
             # We need the condition index so that the conditions are not just appended to the list of conditions of the DRS,
             # but inserted where the presuppositional DRS had been. The order of conditions is important, because it reflects
-            # the proximity of a possible antecedent, which affects antecedent ranking (and our architecture does not allow us to use the 
+            # the proximity of a possible antecedent, which affects antecedent ranking (and our architecture does not allow us to use the
             # index on the list of referents to reflect the proximity/thematic role).
             self.presupp_drs = presupp_drs
             self.condition_index = condition_index
         def __call__(self, drs):
-            """Accommodation: put all referents and conditions from 
+            """Accommodation: put all referents and conditions from
             the presupposition DRS into the given DRS"""
             drs.refs.extend(self.presupp_drs.refs)
             if self.condition_index is None:
@@ -894,7 +895,7 @@ class PresuppositionDRS(DRS):
             else:
                 drs.conds = drs.conds[:self.condition_index + 1] + self.presupp_drs.conds + drs.conds[self.condition_index + 1:]
             return drs
-    
+
     class Bind(Operation):
         def __init__(self, presupp_drs, presupp_variable, presupp_funcname, antecedent_cond, condition_index):
             self.presupp_drs = presupp_drs
@@ -903,10 +904,10 @@ class PresuppositionDRS(DRS):
             self.antecedent_cond = antecedent_cond
             self.condition_index = condition_index
         def __call__(self, drs):
-            """Put all conditions from the presuppositional DRS into the DRS (but do not create duplicates), 
+            """Put all conditions from the presuppositional DRS into the DRS (but do not create duplicates),
             and replace the presupposition condition referent in them with antecedent referent"""
             newdrs = self.presupp_drs.replace(self.presupp_variable, self.antecedent_cond.argument, True)
-            # There will be referents and conditions to move 
+            # There will be referents and conditions to move
             # if there is a relative clause modifying the noun that has triggered the presuppositon
             drs.refs.extend([ref for ref in newdrs.refs \
                              if ref != self.antecedent_cond.argument.variable])
@@ -918,13 +919,13 @@ class PresuppositionDRS(DRS):
             else:
                 drs.conds = drs.conds[:self.condition_index + 1] + conds_to_move + drs.conds[self.condition_index + 1:]
             return drs
-            
+
     class InnerReplace(Operation):
         def __init__(self, presupp_variable, antecedent_ref):
             self.presupp_variable = presupp_variable
             self.antecedent_ref = antecedent_ref
         def __call__(self, drs):
-                """In the conditions of the local DRS, replace the 
+                """In the conditions of the local DRS, replace the
                 referent of the presupposition condition with antecedent_ref"""
                 return drs.replace(self.presupp_variable, self.antecedent_ref, True)
 
@@ -934,17 +935,17 @@ class PresuppositionDRS(DRS):
         def __call__(self, drs):
                 drs.conds.extend(self.temporal_conditions)
                 return drs
-            
+
     class DoMultipleOperations(Operation):
         def __init__(self, operations_list):
             self.operations_list = operations_list
-            
+
         def __call__(self, drs):
             """Do the operations one by one"""
             for operation in self.operations_list:
                 drs = operation(drs)
             return drs
-                
+
     def binding_reading(self, inner_drs, target_drs, antecedent_cond, trail, temporal_conditions=None, local_drs=None):
         condition_index = self._get_condition_index(target_drs, trail)
         binder = self.Bind(self, self.variable, self.function_name, antecedent_cond, condition_index)
@@ -954,7 +955,7 @@ class PresuppositionDRS(DRS):
             if temp_cond_mover:
                 if local_drs is target_drs:
                     return Binding([(inner_drs, binder), (inner_drs, temp_cond_mover), (inner_drs, inner_replacer)])
-                else: 
+                else:
                     return Binding([(local_drs, temp_cond_mover),
                                     (inner_drs, binder), (inner_drs, inner_replacer)])
             else:
@@ -974,7 +975,7 @@ class PresuppositionDRS(DRS):
             else:
                 return Binding([(target_drs, binder),
                         (inner_drs, inner_replacer)])
-    
+
     def accommodation_reading(self, target_drs, trail, temporal_conditions=None, local_drs=None, reading_type=Binding):
         condition_index = self._get_condition_index(target_drs, trail)
         accommodator = self.Accommodate(self, condition_index)
@@ -987,7 +988,7 @@ class PresuppositionDRS(DRS):
                                 (local_drs, temp_cond_mover)])
         else:
             return reading_type([(target_drs, accommodator)])
-                            
+
 class PronounDRS(PresuppositionDRS):
     """
     A class for DRSs for personal, reflexive, and possessive pronouns
@@ -1039,7 +1040,7 @@ class PronounDRS(PresuppositionDRS):
         #non reflexive pronouns can not resolve to variables having a role in the same eventuality
         if self.function_name == DrtTokens.POSSESSIVE_PRONOUN:
             return True
-        else:  
+        else:
             variable = cond.argument.variable
             variable_events = set((event for event, role, event_string in event_data.get(variable, ())))
         if self.function_name == DrtTokens.PRONOUN:
@@ -1052,28 +1053,28 @@ class PronounDRS(PresuppositionDRS):
 class ProperNameDRS(PresuppositionDRS):
 
     def _presupposition_readings(self, trail=[]):
-        """A proper name always has one reading: it is either global binding 
+        """A proper name always has one reading: it is either global binding
         or global accommodation (if binding is not possible)"""
         outer_drs = self._find_outer_drs(trail)
         inner_drs = trail[-1]
         possible_bindings = self.find_bindings([outer_drs])
-        
+
         assert len(possible_bindings) <= 1
-        if possible_bindings:           
+        if possible_bindings:
             # Return the reading
             return [self.binding_reading(inner_drs, outer_drs, possible_bindings[0], trail)], True
         # If no suitable antecedent has been found in the outer DRS,
         # binding is not possible, so we go for accommodation instead.
         return [self.accommodation_reading(outer_drs, trail)], True
-       
+
     def is_possible_binding(self, cond):
         return super(ProperNameDRS, self).is_possible_binding(cond) and cond.is_propername() and cond.function.variable.name == self.function_name
-       
+
     def is_presupposition_cond(self, cond):
         return cond.is_propername()
-    
+
 class DefiniteDescriptionDRS(PresuppositionDRS):
-    
+
     def _presupposition_readings(self, trail=[], overgenerate=False, generate_intermediate=True):
         # If there is a restrictive clause or an adjunct PP, find the perfect binding or accommodate the presupposition
         presupp_event_data = {}
@@ -1083,7 +1084,7 @@ class DefiniteDescriptionDRS(PresuppositionDRS):
         for cond in (c for c in self.conds if isinstance(c, DrtApplicationExpression)):
             self.collect_event_data(cond, presupp_event_data, presupp_event_strings, presupp_individuals)
         self._enrich_event_data_map(presupp_event_data, presupp_event_strings)
-        
+
         possible_bindings = {}
         event_data = {}
         individuals = {}
@@ -1098,7 +1099,7 @@ class DefiniteDescriptionDRS(PresuppositionDRS):
             if isinstance(drs, DrtImpExpression): intermediate_next = True
             if not drs.__class__ is DRS: continue
             # Free variable check
-            if not self._free_variable_check(drs, free, all_refs): 
+            if not self._free_variable_check(drs, free, all_refs):
                 intermediate_next = False
                 continue
             # Find the (maximum) three DRSs
@@ -1110,7 +1111,7 @@ class DefiniteDescriptionDRS(PresuppositionDRS):
             for var in drs_event_data: event_data.setdefault(var, []).extend(drs_event_data[var])
             if drs_possible_bindings:
                 possible_bindings[index] = drs_possible_bindings
-                
+
         # Make accommodation indices a sorted list
         accommod_indices = sorted(list(accommod_indices))
         def accommodation_cite(drsindex):#LocalAccommodation, IntermediateAccommodation, GlobalAccommodation
@@ -1124,7 +1125,7 @@ class DefiniteDescriptionDRS(PresuppositionDRS):
             else:
                 assert ind == 2
                 return LocalAccommodation
-        
+
         # Filter the bindings, create the readings
         antecedent_tracker = [] # do not bind to the same referent twice
         readings = []
@@ -1148,16 +1149,16 @@ class DefiniteDescriptionDRS(PresuppositionDRS):
                     drs_readings.append(self.accommodation_reading(drs, trail, temporal_conditions, local_drs, acc_cite))
                     accommod_indices.remove(drsindex)
             readings.extend(drs_readings)
-        
+
         return readings, True
-    
+
     def _get_free(self):
         free = self.free(True)
         return free, []
-    
+
     def _get_defdescr_events(self, event_data):
         return [item[0] for item in event_data.get(self.variable, ())]
-    
+
     def _is_binding(self, variable, var_individuals, defdescr_events, event_data, presupp_event_data, presupp_individuals):
         # No binding is possible to variables having a role in the same eventuality (look for eventualities in DRSs other than self)
         variable_events = set((event for event, role, event_string in event_data.get(variable, ())))
@@ -1179,10 +1180,10 @@ class DefiniteDescriptionDRS(PresuppositionDRS):
             event = event_tuple[0]
             if event.__class__ == DrtIndividualVariableExpression and event.variable == variable:
                 return False
-        
+
         # Perform the semantic check
         return self.semantic_check(var_individuals, presupp_individuals)
-        
+
     def semantic_check(self, individuals, presupp_individuals, strict=False):
         """ Users can plug in their more sophisticated semantic checks here.
         As for this project, we confine ourselves to ontologies provided by WordNet.
@@ -1203,17 +1204,17 @@ class DefiniteDescriptionDRS(PresuppositionDRS):
                 return False
         else:
             return True
-        
+
     def _free_variable_check(self, drs, free, all_refs):
         if free:
             all_refs.extend(drs.refs)
             for variable in free:
-                if not variable in all_refs: 
+                if not variable in all_refs:
                     return False
         return True
 
 class DrtParser(drt.DrtParser):
-    
+
     def get_all_symbols(self):
         return DrtTokens.SYMBOLS
 
@@ -1227,7 +1228,7 @@ class DrtParser(drt.DrtParser):
         else:
             return drt.DrtParser.handle(self, tok, context)
 
-        
+
     def handle_PresuppositionDRS(self, tok, context):
         """Parse all the Presuppositon DRSs."""
         self.assertNextToken(DrtTokens.OPEN)
@@ -1267,7 +1268,7 @@ class DrtParser(drt.DrtParser):
                                      'Individual variables may not be used as '
                                      'predicates.' % tok)
             self.token() #swallow the Open Paren
-            
+
             #curry the arguments
             accum = self.make_ApplicationExpression(accum,
                                                     self.parse_Expression('APP'))
@@ -1283,11 +1284,11 @@ class DrtParser(drt.DrtParser):
     def handle_DRS(self, tok, context):
         drs = drt.DrtParser.handle_DRS(self, tok, context)
         return DRS(drs.refs, drs.conds)
-    
+
     def get_BooleanExpression_factory(self, tok):
         """This method serves as a hook for other logic parsers that
         have different boolean operators"""
-        
+
         if tok == DrtTokens.DRS_CONC:
             return ConcatenationDRS
         elif tok in DrtTokens.OR:
@@ -1298,23 +1299,23 @@ class DrtParser(drt.DrtParser):
             return DrtIffExpression
         else:
             return None
-  
+
     def make_VariableExpression(self, name):
         return DrtVariableExpression(Variable(name))
 
     def make_ApplicationExpression(self, function, argument):
         return DrtApplicationExpression(function, argument)
-    
+
     def make_ConstantExpression(self, name):
         return DrtConstantExpression(Variable(name))
 
     def make_NegatedExpression(self, expression):
         return DrtNegatedExpression(expression)
-    
+
     def make_EqualityExpression(self, first, second):
         """This method serves as a hook for other logic parsers that
         have different equality expression classes"""
         return DrtEqualityExpression(first, second)
-    
+
     def make_LambdaExpression(self, variables, term):
         return DrtLambdaExpression(variables, term)
