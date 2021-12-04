@@ -16,6 +16,7 @@ from inference import inference_check, get_bk, AdmissibilityError, ConsistencyEr
 class UngrammaticalException(Exception):
     pass
 
+
 class Tester(object):
     
     INFERROR = {
