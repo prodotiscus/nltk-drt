@@ -1,5 +1,5 @@
 # nltk-drt
-The aim of our work in this repo:
+The aim of our work in this repo is:
    * to port the original [nltk-drt](https://github.com/napsternxg/nltk-drt) (see forked repository) from Python 2 to Python 3
    * to fix large dependency / import issues that came up as the mainstream [nltk](https://github.com/nltk/nltk) (**N**atural **L**anguage **T**ool**k**it) evolved and this module was deprecated
    * to add support for types of anaphora & presupposition that are not supported by the current version of the module (like VP anaphora or specific indefinites \[Geurts 2010\])
