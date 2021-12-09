@@ -1,5 +1,5 @@
 """
-NLTK DRT module extended with presuppositions  
+NLTK DRT module extended with presuppositions
 """
 
 __author__ = "Alex Kislev, Emma Li, Peter Makarov"
@@ -22,7 +22,7 @@ class Curt(object):
         self.tester = Tester(grammar_file, logic_parser)
         self.background = background
         self.discourse = None
-        
+
     def randomize(self, option_list):
         return option_list[random.randint(0, len(option_list) - 1)]
 
@@ -31,16 +31,16 @@ class Curt(object):
 
     def inconsistent(self):
         return self.randomize(Curt.INCONSISTENT)
-        
+
     def uninformative(self):
         return self.randomize(Curt.UNINFORMATIVE)
 
     def ok(self):
         return self.randomize(Curt.OK)
-    
+
     def goodbye(self):
         return self.randomize(Curt.GOODBYE)
-    
+
     def respond(self, s, explicit):
         if isinstance(s, AdmissibilityError):
             return "%s%s" % (self.inadmissible(), "(inadmissible)" if explicit else "")
@@ -59,17 +59,17 @@ class Curt(object):
                 out = []
                 for reading, error in errors:
                     if verbose:
-                        print "Error: %s" % error
+                        print("Error: %s" % error)
                     out.append(self.respond(error, explicit))
                 return ", ".join(out)
             else:
                 if verbose:
                     for inference in inferences:
-                        print "reading: %s" % inference
+                        print ("reading: %s" % inference)
                 self.discourse = (self.discourse + expression).simplify()
 
         return self.ok()
-        
+
     def __str__(self):
         return str(self.discourse)
 
@@ -78,44 +78,44 @@ def main():
     explicit = False
     verbose = False
     curt = Curt(background=BK)
-    print "Welcome to Curt, type 'h' for help"
+    print ("Welcome to Curt, type 'h' for help")
     while True:
         s = raw_input("What say you? ")
         if s == "bye":
-            print curt.goodbye()
+            print (curt.goodbye())
             return
         elif s == "m":
             show_model = False if show_model else True
-            print "display models: %s" % ("on" if  show_model else "off")
+            print ("display models: %s" % ("on" if  show_model else "off"))
         elif s == "e":
             explicit = False if explicit else True
-            print "explicit mode: %s" % ("on" if  explicit else "off")
+            print ("explicit mode: %s" % ("on" if  explicit else "off"))
         elif s == "v":
             verbose = False if verbose else True
-            print "verbose mode: %s" % ("on" if  verbose else "off")
+            print ("verbose mode: %s" % ("on" if  verbose else "off"))
         elif s == "h":
-            print "e\t toggle explicit mode"
-            print "m\t toggle model printing"
-            print "v\t toggle verbose mode"
-            print "h\t show this message"
-            print "bye\t exit"
+            print ("e\t toggle explicit mode")
+            print ("m\t toggle model printing")
+            print ("v\t toggle verbose mode")
+            print ("h\t show this message")
+            print ("bye\t exit")
         else:
-            print "You say:\t%s" % s
+            print ("You say:\t%s" % s)
             try:
-                print "Curt says:\t%s" % curt.process(s, explicit, verbose)
+                print ("Curt says:\t%s" % curt.process(s, explicit, verbose))
             except ValueError as e:
-                print "Error: %s" % e
+                print ("Error: %s" % e)
             except UngrammaticalException:
-                print "Curt says:\tWhat was that again?"
+                print ("Curt says:\tWhat was that again?")
             if show_model:
-                print "Model: %s" % str(curt)
+                print ("Model: %s" % str(curt))
 
 def test_curt():
     input = ["If Mia is away Angus is out", "Mia is away", "Angus is out", "Mia is not away", "Mia is away"]
     curt = Curt(background=BK)
     for i in input:
-        print i
-        print curt.process(i, True)
+        print (i)
+        print (curt.process(i, True))
 
 if __name__ == "__main__":
     main()

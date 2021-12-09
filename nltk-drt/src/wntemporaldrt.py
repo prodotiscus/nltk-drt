@@ -24,11 +24,11 @@ class WordNetLookup(object):
     def __init__(self, path='corpora/wordnet'):
         self.path = path
         self.WN = None
-    
+
     def wn(self):
         if not self.WN:
             self.WN = WordNetCorpusReader(nltk.data.find(self.path))
-                    
+
     def is_superclass_of(self, first, second):
         "Is the second noun the superclass of the first one?"
         self.wn()
@@ -42,24 +42,24 @@ class WordNetLookup(object):
                 if synset_second in self._noun_synset(first, i).common_hypernyms(synset_second):
                     return True
         return False
-                
+
     def is_adjective(self, word):
-        try: 
+        try:
             self._num_of_senses(word, 'a')
             return True
         except: return False
-    
+
     def _noun_synset(self, noun, ind):
         self.wn()
         return self.WN.synset("%s.n.%s" % (noun, ind))
-    
+
     def _num_of_senses (self, word, pos='n'):
         self.wn()
         return len(self.WN._lemma_pos_offset_map[word][pos])
-    
+
     def is_person(self, word):
         return self.is_superclass_of(word, 'person')
-    
+
     def is_animal(self, word):
         return self.is_superclass_of(word, 'animal')
 
@@ -68,15 +68,15 @@ class DefiniteDescriptionDRS(drt.DefiniteDescriptionDRS):
     def __init__(self, refs, conds):
         self.wn = WordNetLookup()
         super(drt.DefiniteDescriptionDRS, self).__init__(refs, conds)
-        
+
     def _strict_check (self, presupp_noun, other_cond):
         other_noun = other_cond.function.variable.name
         return (
-                presupp_noun == other_noun or 
-                self.wn.is_superclass_of(other_noun, presupp_noun) or 
+                presupp_noun == other_noun or
+                self.wn.is_superclass_of(other_noun, presupp_noun) or
                 (other_cond.is_propername() and (self.wn.is_person(presupp_noun) or self.wn.is_animal(presupp_noun)))
                 )
-        
+
     def _non_strict_check(self, presupp_noun, other_cond):
         strict_check = self._strict_check(presupp_noun, other_cond)
         if strict_check: return True
@@ -85,7 +85,7 @@ class DefiniteDescriptionDRS(drt.DefiniteDescriptionDRS):
         return (
                 (self.wn.is_person(presupp_noun) and self.wn.is_person(other_noun))
                 or self.wn.is_superclass_of(presupp_noun, other_noun)) # cat, kitty
-        
+
     def semantic_check(self, individuals, presupp_individuals, strict=False):
         check = {True : self._strict_check,
                  False: self._non_strict_check}[strict]
@@ -114,7 +114,7 @@ class DefiniteDescriptionDRS(drt.DefiniteDescriptionDRS):
                 for presupp_individual in presupp_individuals[self.variable]:
                     presupp_noun = presupp_individual.function.variable.name
                     if found_noun and self.wn.is_adjective(presupp_noun): continue
-                    if check (presupp_noun, individual): 
+                    if check (presupp_noun, individual):
                         return True
             return False
 

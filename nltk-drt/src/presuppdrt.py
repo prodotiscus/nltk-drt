@@ -17,6 +17,7 @@ from nltk.sem.logic import BasicType
 from nltk.sem.logic import Expression
 # ParseException -> LogicalExpressionException
 from nltk.sem.logic import LogicalExpressionException
+from nltk.sem.logic import ImpExpression, BooleanExpression, IffExpression
 from nltk.sem.drt import DrsDrawer, AnaphoraResolutionException
 
 import nltk.sem.drt as drt
@@ -224,6 +225,8 @@ class DrtTokens(drt.DrtTokens):
     PRONOUN = 'PRO'
     REFLEXIVE_PRONOUN = 'RPRO'
     POSSESSIVE_PRONOUN = 'PPRO'
+    # ??
+    NLTK = 'NLTK'
 
 class DrtExpression(drt.DrtExpression):
     """
@@ -464,7 +467,8 @@ class DRS(DrtExpression, drt.DRS):
                         reading.append((self, ConditionRemover(i)))
                 return _readings[0], False
 
-    def str(self, syntax=DrtTokens.NLTK):
+    #def str(self, syntax=DrtTokens.NLTK):
+    def str(self, syntax=None):
         if syntax == DrtTokens.PROVER9:
             return self.fol().str(syntax)
         else:
@@ -608,6 +612,7 @@ class DrtLambdaExpression(DrtExpression, drt.DrtLambdaExpression):
         """@see: AbstractExpression.get_refs()"""
         return []
 
+
 class DrtBooleanExpression(DrtExpression, drt.DrtBooleanExpression):
     def readings(self, trail=[]):
         first_readings = self.first.readings(trail + [self])
@@ -636,7 +641,27 @@ class DrtBooleanExpression(DrtExpression, drt.DrtBooleanExpression):
 class DrtOrExpression(DrtBooleanExpression, drt.DrtOrExpression):
     pass
 
-class DrtImpExpression(DrtBooleanExpression, drt.DrtImpExpression):
+
+class DrtImpExpression(DrtBooleanExpression, ImpExpression):
+    def fol(self):
+        first_drs = self.first
+        second_drs = self.second
+
+        accum = None
+        if first_drs.conds:
+            accum = reduce(AndExpression,
+                           [c.fol() for c in first_drs.conds])
+
+        if accum:
+            accum = ImpExpression(accum, second_drs.fol())
+        else:
+            accum = second_drs.fol()
+
+        for ref in first_drs.refs[::-1]:
+            accum = AllExpression(ref, accum)
+
+        return accum
+
     def readings(self, trail=[]):
         first_readings = self.first.readings(trail + [self])
         if first_readings:
@@ -656,8 +681,11 @@ class DrtImpExpression(DrtBooleanExpression, drt.DrtImpExpression):
                 return self.first == other.first and self.second == other.second
         return False
 
-class DrtIffExpression(DrtBooleanExpression, drt.DrtIffExpression):
-    pass
+
+class DrtIffExpression(DrtBooleanExpression, IffExpression):
+    def fol(self):
+        return IffExpression(self.first.fol(), self.second.fol())
+
 
 class DrtEqualityExpression(DrtExpression, drt.DrtEqualityExpression):
     def readings(self, trail=[]):
@@ -666,7 +694,7 @@ class DrtEqualityExpression(DrtExpression, drt.DrtEqualityExpression):
     def deepcopy(self, operations=[]):
         return self.__class__(self.first.deepcopy(operations), self.second.deepcopy(operations))
 
-class ConcatenationDRS(DrtBooleanExpression, drt.ConcatenationDRS):
+class ConcatenationDRS(DrtBooleanExpression):
     """DRS of the form '(DRS + DRS)'"""
     def replace(self, variable, expression, replace_bound=False):
         """Replace all instances of variable v with expression E in self,
@@ -720,6 +748,32 @@ class ConcatenationDRS(DrtBooleanExpression, drt.ConcatenationDRS):
             return drs_type(first.refs + second.refs, first.conds + second.conds)
         else:
             return self.__class__(first, second)
+
+    def get_refs(self, recursive=False):
+        """@see: AbstractExpression.get_refs()"""
+        return self.first.get_refs(recursive) + self.second.get_refs(recursive)
+
+    def getOp(self, syntax=DrtTokens.NLTK):
+        return DrtTokens.DRS_CONC
+
+    def __eq__(self, other):
+        r"""Defines equality modulo alphabetic variance.
+        If we are comparing \x.M  and \y.N, then check equality of M and N[x/y]."""
+        if isinstance(other, ConcatenationDRS):
+            self_refs = self.get_refs()
+            other_refs = other.get_refs()
+            if len(self_refs) == len(other_refs):
+                converted_other = other
+                for (r1,r2) in zip(self_refs, other_refs):
+                    varex = self.make_VariableExpression(r1)
+                    converted_other = converted_other.replace(r2, varex, True)
+                return self.first == converted_other.first and \
+                        self.second == converted_other.second
+        return False
+
+    def fol(self):
+        return AndExpression(self.first.fol(), self.second.fol())
+
 
 class DrtApplicationExpression(DrtExpression, drt.DrtApplicationExpression):
 
@@ -1255,7 +1309,7 @@ class DrtParser(drt.DrtParser):
                     if self.token(0) == drt.DrtTokens.COMMA:
                         self.token() # swallow the comma
                 self.token() # swallow the CLOSE_BRACE
-        except ParseException:
+        except LogicalExpressionException:
             #we've reached the end of input, this constant has no features
             pass
         if self.inRange(0) and self.token(0) == DrtTokens.OPEN:
@@ -1263,7 +1317,7 @@ class DrtParser(drt.DrtParser):
                 accum = DrtFeatureConstantExpression(accum.variable, features)
             #The predicate has arguments
             if isinstance(accum, drt.DrtIndividualVariableExpression):
-                raise ParseException(self._currentIndex,
+                raise LogicalExpressionException(self._currentIndex,
                                      '\'%s\' is an illegal predicate name.  '
                                      'Individual variables may not be used as '
                                      'predicates.' % tok)
